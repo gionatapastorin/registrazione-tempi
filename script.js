@@ -1,145 +1,139 @@
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', function() {
+    // Inizializza i componenti dropdown di Materialize
+    var elems = document.querySelectorAll('select');
+    M.FormSelect.init(elems);
 
     // --- CONFIGURAZIONE ---
     // INCOLLA QUI L'URL DELLA TUA WEB APP DEPLOYATA DA GOOGLE APPS SCRIPT
     const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby_VKAWwJFeeQLSFkDHbi83smqJGnhXKnm3gd9GISMKfWFcX4fxM-30NtJUwAtZPV3w/exec';
     // --------------------
 
-
-    // Elementi del DOM
-    const form = document.getElementById('work-form');
-    const operatorSelect = document.getElementById('operatore');
+    const operatoreSelect = document.getElementById('operatore');
     const commessaSelect = document.getElementById('commessa');
     const faseSelect = document.getElementById('fase');
     const startButton = document.getElementById('start-button');
     const endButton = document.getElementById('end-button');
-    const messageBox = document.getElementById('message-box');
-    const loader = document.getElementById('loader');
+    const messageDiv = document.getElementById('message');
 
     /**
-     * Mostra o nasconde il loader e abilita/disabilita il form.
-     * @param {boolean} isLoading - True per mostrare il loader, false per nasconderlo.
+     * Mostra un messaggio all'utente.
+     * @param {string} text - Il messaggio da visualizzare.
+     * @param {boolean} isSuccess - True per un messaggio di successo, false per un errore.
      */
-    const setLoadingState = (isLoading) => {
-        loader.style.display = isLoading ? 'block' : 'none';
-        form.style.display = isLoading ? 'none' : 'block';
-    };
+    function showMessage(text, isSuccess) {
+        messageDiv.textContent = text;
+        messageDiv.className = isSuccess ? 'card-panel success' : 'card-panel error';
+        messageDiv.style.display = 'block';
+        
+        // Nasconde il messaggio dopo 5 secondi
+        setTimeout(() => {
+            messageDiv.style.display = 'none';
+        }, 5000);
+    }
 
     /**
-     * Popola un elemento <select> con le opzioni fornite.
-     * @param {HTMLSelectElement} selectElement - L'elemento select da popolare.
+     * Popola un elemento <select> con le opzioni.
+     * @param {string} elementId - L'ID dell'elemento select.
      * @param {Array<string|Object>} options - L'array di opzioni.
-     * @param {string} placeholder - Il testo da mostrare come prima opzione disabilitata.
      */
-    const populateSelect = (selectElement, options, placeholder) => {
-        selectElement.innerHTML = `<option value="" disabled selected>${placeholder}</option>`;
+    function populateSelect(elementId, options) {
+        const selectElement = document.getElementById(elementId);
+        selectElement.innerHTML = `<option value="" disabled selected>Seleziona ${elementId.charAt(0).toUpperCase() + elementId.slice(1)}</option>`;
+        
         options.forEach(option => {
             const optionElement = document.createElement('option');
             if (typeof option === 'object' && option !== null) {
-                // Per le commesse {value, text}
                 optionElement.value = option.value;
                 optionElement.textContent = option.text;
             } else {
-                // Per operatori e fasi (stringhe semplici)
                 optionElement.value = option;
                 optionElement.textContent = option;
             }
             selectElement.appendChild(optionElement);
         });
-    };
 
-    /**
-     * Mostra un messaggio all'utente nella message box.
-     * @param {string} message - Il messaggio da visualizzare.
-     * @param {'success'|'error'} type - Il tipo di messaggio.
-     */
-    const showMessage = (message, type) => {
-        messageBox.textContent = message;
-        messageBox.className = `message-box ${type}`;
-        messageBox.style.display = 'block';
-        setTimeout(() => {
-            messageBox.style.display = 'none';
-        }, 5000); // Nasconde il messaggio dopo 5 secondi
-    };
+        // Re-inizializza il select di Materialize per aggiornare la UI
+        M.FormSelect.init(selectElement);
+    }
 
     /**
      * Carica i dati iniziali (operatori, commesse, fasi) dall'API di Apps Script.
      */
-    const fetchInitialData = async () => {
-        setLoadingState(true);
-        try {
-            if (APPS_SCRIPT_URL.includes('YOUR_DEPLOYMENT_ID')) {
-                 throw new Error("Per favore, imposta l'URL di Apps Script nel file script.js.");
-            }
-            const response = await fetch(`${APPS_SCRIPT_URL}?action=getInitialData`);
-            if (!response.ok) {
-                throw new Error(`Errore di rete: ${response.statusText}`);
-            }
-            const data = await response.json();
-            if (data.status === 'success') {
-                populateSelect(operatorSelect, data.data.operatori, 'Seleziona operatore');
-                populateSelect(commessaSelect, data.data.commesse, 'Seleziona commessa');
-                populateSelect(faseSelect, data.data.fasi, 'Seleziona fase');
-            } else {
-                throw new Error(data.message || 'Errore nel caricamento dati.');
-            }
-        } catch (error) {
-            showMessage(error.message, 'error');
-        } finally {
-            setLoadingState(false);
+    function fetchInitialData() {
+        if (APPS_SCRIPT_URL.includes('YOUR_DEPLOYMENT_ID')) {
+            showMessage("Per favore, imposta l'URL di Apps Script nel file script.js.", false);
+            return;
         }
-    };
-    
+        fetch(`${APPS_SCRIPT_URL}?action=getInitialData`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    populateSelect('operatore', data.data.operatori);
+                    populateSelect('commessa', data.data.commesse);
+                    populateSelect('fase', data.data.fasi);
+                } else {
+                    throw new Error(data.message || 'Errore nel caricamento dati.');
+                }
+            })
+            .catch(error => {
+                showMessage('Errore di comunicazione: ' + error.message, false);
+            });
+    }
+
     /**
      * Gestisce l'invio dell'azione (inizio o fine) all'API di Apps Script.
      * @param {'startWork'|'endWork'} action - L'azione da eseguire.
      */
-    const handleAction = async (action) => {
-        // Validazione
-        if (!operatorSelect.value || !commessaSelect.value || !faseSelect.value) {
-            showMessage('Per favore, compila tutti i campi.', 'error');
+    function handleAction(action) {
+        const operatore = operatoreSelect.value;
+        const codiceCommessa = commessaSelect.value;
+        const fase = faseSelect.value;
+
+        if (!operatore || !codiceCommessa || !fase) {
+            showMessage('Per favore, compila tutti i campi.', false);
             return;
         }
 
-        const requestData = {
-            action: action,
-            operatore: operatorSelect.value,
-            codiceCommessa: commessaSelect.value,
-            fase: faseSelect.value,
-        };
+        const requestData = { action, operatore, codiceCommessa, fase };
         
-        setLoadingState(true);
-        messageBox.style.display = 'none';
+        // Disabilita i bottoni per prevenire click multipli
+        startButton.disabled = true;
+        endButton.disabled = true;
 
-        try {
-            const response = await fetch(APPS_SCRIPT_URL, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'text/plain;charset=utf-8', // Apps Script POST richiede questo header
-                },
-                body: JSON.stringify(requestData),
-                mode: 'cors', // Necessario per richieste cross-origin
-            });
-
-            const result = await response.json();
-
+        fetch(APPS_SCRIPT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(requestData),
+            mode: 'cors'
+        })
+        .then(response => response.json())
+        .then(result => {
             if (result.status === 'success') {
-                showMessage(result.message, 'success');
-                form.reset(); // Resetta il form in caso di successo
+                showMessage(result.message, true);
+                // Resetta i campi
+                operatoreSelect.selectedIndex = 0;
+                commessaSelect.selectedIndex = 0;
+                faseSelect.selectedIndex = 0;
+                M.FormSelect.init(document.querySelectorAll('select')); // Re-inizializza
             } else {
                 throw new Error(result.message || 'Si è verificato un errore.');
             }
-        } catch (error) {
-            showMessage(error.message, 'error');
-        } finally {
-            setLoadingState(false);
-        }
-    };
+        })
+        .catch(error => {
+            showMessage(error.message, false);
+        })
+        .finally(() => {
+            // Riabilita i bottoni
+            startButton.disabled = false;
+            endButton.disabled = false;
+        });
+    }
 
-    // Event Listeners
+    // Aggiungi event listener ai bottoni
     startButton.addEventListener('click', () => handleAction('startWork'));
     endButton.addEventListener('click', () => handleAction('endWork'));
-    
-    // Caricamento iniziale dei dati
+
+    // Carica i dati all'avvio
     fetchInitialData();
 });
+
