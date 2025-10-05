@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registrazione Tempi Lavorazione</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div id="app-container">
+        <header>
+            <h1>Registrazione Tempi Lavorazione</h1>
+            <p>Seleziona i dati e avvia o termina una fase di lavoro.</p>
+        </header>
+
+        <main>
+            <div id="loader" class="loader"></div>
+
+            <form id="work-form">
+                <div class="form-group">
+                    <label for="operatore">Operatore</label>
+                    <select id="operatore" name="operatore" required>
+                        <option value="" disabled selected>Caricamento...</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="commessa">Commessa</label>
+                    <select id="commessa" name="commessa" required>
+                        <option value="" disabled selected>Caricamento...</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="fase">Fase di Lavorazione</label>
+                    <select id="fase" name="fase" required>
+                        <option value="" disabled selected>Caricamento...</option>
+                    </select>
+                </div>
+
+                <div class="button-group">
+                    <button type="button" id="start-button" class="btn btn-start">INIZIA</button>
+                    <button type="button" id="end-button" class="btn btn-end">FINE</button>
+                </div>
+            </form>
+
+            <div id="message-box" class="message-box" style="display: none;"></div>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
