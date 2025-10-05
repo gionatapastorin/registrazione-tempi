@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- CONFIGURAZIONE ---
     // INCOLLA QUI L'URL DELLA TUA WEB APP DEPLOYATA DA GOOGLE APPS SCRIPT
-    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec';
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby_VKAWwJFeeQLSFkDHbi83smqJGnhXKnm3gd9GISMKfWFcX4fxM-30NtJUwAtZPV3w/exec';
     // --------------------
 
 
