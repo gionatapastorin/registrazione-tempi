@@ -1,58 +1,53 @@
 <!DOCTYPE html>
-<html lang="it">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registrazione Tempi Lavorazione</title>
+<html>
+  <head>
+    <base target="_top">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+    <!-- Link al tuo foglio di stile CSS -->
     <link rel="stylesheet" href="style.css">
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-</head>
-<body>
+  </head>
+  <body>
+    <div class="container">
+      <h4>Inserimento Tempi Lavorazione</h4>
+      
+      <div class="input-field col s12">
+        <select id="operatore">
+          <option value="" disabled selected>Seleziona Operatore</option>
+        </select>
+        <label>Operatore</label>
+      </div>
 
-    <div id="app-container">
-        <header>
-            <h1>Registrazione Tempi Lavorazione</h1>
-            <p>Seleziona i dati e avvia o termina una fase di lavoro.</p>
-        </header>
+      <div class="input-field col s12">
+        <select id="commessa">
+          <option value="" disabled selected>Seleziona Commessa</option>
+        </select>
+        <label>Commessa</label>
+      </div>
 
-        <main>
-            <div id="loader" class="loader"></div>
+      <div class="input-field col s12">
+        <select id="fase">
+          <option value="" disabled selected>Seleziona Fase</option>
+        </select>
+        <label>Fase di Lavorazione</label>
+      </div>
 
-            <form id="work-form">
-                <div class="form-group">
-                    <label for="operatore">Operatore</label>
-                    <select id="operatore" name="operatore" required>
-                        <option value="" disabled selected>Caricamento...</option>
-                    </select>
-                </div>
+      <button class="btn waves-effect waves-light green" id="start-button">INIZIA
+        <i class="material-icons right">play_arrow</i>
+      </button>
+      <button class="btn waves-effect waves-light red" id="end-button">FINE
+        <i class="material-icons right">stop</i>
+      </button>
 
-                <div class="form-group">
-                    <label for="commessa">Commessa</label>
-                    <select id="commessa" name="commessa" required>
-                        <option value="" disabled selected>Caricamento...</option>
-                    </select>
-                </div>
+      <!-- Elemento per mostrare i messaggi -->
+      <div id="message" class="card-panel" style="display:none; margin-top: 20px;"></div>
 
-                <div class="form-group">
-                    <label for="fase">Fase di Lavorazione</label>
-                    <select id="fase" name="fase" required>
-                        <option value="" disabled selected>Caricamento...</option>
-                    </select>
-                </div>
-
-                <div class="button-group">
-                    <button type="button" id="start-button" class="btn btn-start">INIZIA</button>
-                    <button type="button" id="end-button" class="btn btn-end">FINE</button>
-                </div>
-            </form>
-
-            <div id="message-box" class="message-box" style="display: none;"></div>
-        </main>
     </div>
 
+    <!-- Script di Materialize e il tuo script personalizzato -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
     <script src="script.js"></script>
-</body>
+  </body>
 </html>
+
