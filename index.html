@@ -109,83 +109,60 @@
 
  <div id="toast"></div>
 
-  <script>
-const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbwsvXS4-ab6r01PuF1tMfX6ykL-gZiB8Ll-I6ZHLPMyzxLjbKzWA_4LGOpz7v19w2Zm/exec";
+ <script>
+const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbwsvXS4-ab6r01PuF1tMfX6ykL-gZiB8Ll-I6ZHLPMyzxLjbKzWA_4LGOpz7v19w2Zm/exec"; // Il tuo URL di Apps Script
 const API_TOKEN  = "7gH2-Lavori2025-OK";
 
-  (function(){
-    window.google = window.google || {};
-    google.script = google.script || {};
-
-    // JSONP helper
-    function jsonp(url, params){
-      return new Promise((resolve, reject)=>{
-        const cb = "cb_" + Date.now() + "_" + Math.random().toString(36).slice(2);
-        params = Object.assign({}, params, { callback: cb, _: Date.now() }); // cache buster
-        const qs = new URLSearchParams(params).toString();
-
-        const s = document.createElement('script');
-        s.src = url + "?" + qs;
-        s.async = true;
-
-        const cleanup = ()=>{
-          try { delete window[cb]; } catch(e){}
-          if (s && s.parentNode) s.parentNode.removeChild(s);
-        };
-
-        window[cb] = function(payload){
-          cleanup();
-          resolve(payload);
-        };
-        s.onerror = function(){
-          cleanup();
-          reject(new Error("JSONP load error"));
-        };
-
-        document.head.appendChild(s);
-      });
+// Nuovo gestore delle chiamate API basato su fetch
+const server = {
+  call: function(method, args = []) {
+    const payload = {
+      method: method,
+      args: args
+    };
+    if (method !== 'getInitialData') {
+      payload.token = API_TOKEN;
     }
 
-    function createRunner(){
-      let successHandler = null;
-      let failureHandler = null;
+    return fetch(WEBAPP_URL, {
+      method: 'POST',
+      redirect: 'follow',
+      headers: {
+        'Content-Type': 'text/plain;charset=utf-t', // Necessario per Apps Script
+      },
+      body: JSON.stringify(payload)
+    })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Errore di rete o server.');
+      }
+      return response.json();
+    })
+    .then(data => {
+      if (data.ok) {
+        return data.result; // Restituisce direttamente il risultato in caso di successo
+      } else {
+        throw new Error(data.error || 'Errore sconosciuto dal server.');
+      }
+    });
+  }
+};
 
-      const api = new Proxy(function(){}, {
-        get(target, prop){
-          if (prop === 'withSuccessHandler') return fn => { successHandler = fn; return api; };
-          if (prop === 'withFailureHandler') return fn => { failureHandler = fn; return api; };
-
-          // Chiamata a una funzione server: prop = getInitialData | startWork | endWork
-          return (...args) => {
-            const params = {
-              method: prop,
-              args: JSON.stringify(args)
-            };
-            if (prop !== 'getInitialData') params.token = API_TOKEN;
-
-            jsonp(WEBAPP_URL, params)
-              .then(({ok, result, error})=>{
-                if (ok) {
-                  successHandler && successHandler(result);
-                } else {
-                  const err = new Error(error || 'Errore server');
-                  if (failureHandler) failureHandler(err); else console.error(err);
-                }
-              })
-              .catch(err=>{
-                if (failureHandler) failureHandler(err); else console.error(err);
-              });
-          };
-        }
-      });
-
-      google.script.run = api;
+// "Simuliamo" la vecchia sintassi di google.script.run per ridurre le modifiche al resto del codice
+const google = {
+  script: {
+    run: {
+      withSuccessHandler: (successCb) => ({
+        withFailureHandler: (failureCb) => ({
+          getInitialData: (...args) => server.call('getInitialData', args).then(successCb).catch(failureCb),
+          startWork: (...args) => server.call('startWork', args).then(successCb).catch(failureCb),
+          endWork: (...args) => server.call('endWork', args).then(successCb).catch(failureCb)
+        })
+      })
     }
-
-    createRunner();
-  })();
+  }
+};
 </script>
-
 
 <script>
    // === Stato locale ===
