@@ -170,3 +170,11 @@ main{ display:flex; flex-direction:column; gap:16px; }
 @keyframes spin{ 0%{transform:rotate(0);} 100%{transform:rotate(360deg);} }
 @keyframes fadein{ from{bottom:0; opacity:0;} to{bottom:30px; opacity:1;} }
 @keyframes fadeout{ from{bottom:30px; opacity:1;} to{bottom:0; opacity:0;} }
+
+.slider:disabled::-webkit-slider-thumb {
+  opacity: 1;
+}
+
+.slider:disabled::-moz-range-thumb {
+  opacity: 1;
+}
