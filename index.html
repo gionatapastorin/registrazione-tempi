@@ -1,53 +1,464 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <base target="_top">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
-    <!-- Link al tuo foglio di stile CSS -->
-    <link rel="stylesheet" href="style.css">
-  </head>
-  <body>
-    <div class="container">
-      <h4>Inserimento Tempi Lavorazione</h4>
-      
-      <div class="input-field col s12">
-        <select id="operatore">
-          <option value="" disabled selected>Seleziona Operatore</option>
-        </select>
-        <label>Operatore</label>
-      </div>
+<head>
+ <base target="_top">
 
-      <div class="input-field col s12">
-        <select id="commessa">
-          <option value="" disabled selected>Seleziona Commessa</option>
-        </select>
-        <label>Commessa</label>
-      </div>
 
-      <div class="input-field col s12">
-        <select id="fase">
-          <option value="" disabled selected>Seleziona Fase</option>
-        </select>
-        <label>Fase di Lavorazione</label>
-      </div>
+ <!-- Meta -->
+ <meta name="theme-color" content="#11735d">
+ <meta name="mobile-web-app-capable" content="yes">
+ <meta name="apple-mobile-web-app-capable" content="yes">
 
-      <button class="btn waves-effect waves-light green" id="start-button">INIZIA
-        <i class="material-icons right">play_arrow</i>
-      </button>
-      <button class="btn waves-effect waves-light red" id="end-button">FINE
-        <i class="material-icons right">stop</i>
-      </button>
 
-      <!-- Elemento per mostrare i messaggi -->
-      <div id="message" class="card-panel" style="display:none; margin-top: 20px;"></div>
+ <!-- Icone -->
+ <link rel="icon" type="image/png" href="https://i.ibb.co/KjP10wBc/httpswww-noticons-comicond-Aq-EF7-CB4-DFFFEFE00-svg.png">
+ <link rel="apple-touch-icon" href="https://i.ibb.co/KjP10wBc/httpswww-noticons-comicond-Aq-EF7-CB4-DFFFEFE00-svg.png">
 
-    </div>
 
-    <!-- Script di Materialize e il tuo script personalizzato -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
-    <script src="script.js"></script>
-  </body>
+ <!-- Font -->
+ <link rel="preconnect" href="https://fonts.googleapis.com">
+ <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+ <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;700&family=Poppins:wght@500;700&display=swap" rel="stylesheet">
+
+
+ <!-- CSS esterno -->
+ <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+ <div id="loader" class="loader-container">
+   <div class="loader"></div>
+   <p>Caricamento dati...</p>
+ </div>
+
+
+ <!-- Precaricamento icone -->
+ <div id="icon-preloader" style="display:none;"></div>
+
+
+ <!-- Titolo -->
+ <div id="title-card-container" class="card title-card" style="display:none;">
+   <header>
+     <h1>INSERIMENTO<br>TEMPI LAVORAZIONE</h1>
+   </header>
+ </div>
+
+
+ <!-- Selezioni -->
+ <div id="selection-card" class="card" style="display:none;">
+   <main>
+     <div class="form-group">
+       <select id="operatori-select" class="input-field"></select>
+     </div>
+     <div class="form-group">
+       <select id="commesse-select" class="input-field"></select>
+     </div>
+   </main>
+ </div>
+
+
+ <!-- Fase (slider + pulsanti) -->
+ <div id="fase-card" class="card" style="display:none;">
+   <main>
+     <div class="form-group">
+       <div class="slider-wrapper">
+         <div id="fase-display" class="slider-label">
+           <img src="https://www.noticons.com/icon/42pE/F7CB4D/FFFEFE00.svg" alt="Fase Icon">
+           <span id="fase-text">Caricamento...</span>
+         </div>
+
+
+         <div class="slider-container">
+           <!-- thumb con doppio layer per cross-fade -->
+           <div id="slider-thumb-emoji"></div>
+           <input type="range" min="0" max="0" value="0" class="slider" id="fase-slider">
+         </div>
+       </div>
+     </div>
+   </main>
+
+
+   <div class="action-buttons-container">
+     <button id="avvio-btn" class="action-btn expanded">
+       <img class="icon" src="https://www.noticons.com/icon/EA24/11735D/FFFEFE00.svg" alt="Avvio Icon">
+       <span class="text">AVVIO</span>
+     </button>
+     <button id="stop-btn" class="action-btn collapsed">
+       <img class="icon" src="https://www.noticons.com/icon/aoZv/11735D/FFFEFE00.svg" alt="Stop Icon">
+       <span class="text">STOP</span>
+     </button>
+   </div>
+ </div>
+
+
+ <div id="toast"></div>
+
+
+ 
+  <!-- Shim: emulate google.script.run over fetch -->
+  <script>
+    const WEBAPP_URL = "YOUR_WEBAPP_URL";
+    const API_TOKEN  = "YOUR_SHARED_TOKEN";
+    (function(){
+      window.google = window.google || {};
+      google.script = google.script || {};
+      function createRunner(){
+        let successHandler = null;
+        let failureHandler = null;
+        const api = new Proxy(function(){}, {
+          get(target, prop){
+            if(prop === 'withSuccessHandler') return fn => { successHandler = fn; return api; };
+            if(prop === 'withFailureHandler') return fn => { failureHandler = fn; return api; };
+            return async (...args) => {
+              try{
+                const res = await fetch(WEBAPP_URL, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ type:'rpc', method: prop, args, token: API_TOKEN })
+                });
+                const json = await res.json();
+                if(json && json.ok){
+                  successHandler && successHandler(json.result);
+                }else{
+                  const err = new Error((json && json.error) || 'Errore API');
+                  if(failureHandler) failureHandler(err); else throw err;
+                }
+              }catch(e){
+                if(failureHandler) failureHandler(e); else console.error(e);
+              }
+            };
+          }
+        });
+        return api;
+      }
+      google.script.run = createRunner();
+    })();
+  </script>
+
+<script>
+   // === Stato locale ===
+   const STORAGE_KEY = 'workState';
+   function saveStateToLocalStorage(state){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+   function loadStateFromLocalStorage(){ const s=localStorage.getItem(STORAGE_KEY); return s?JSON.parse(s):null; }
+   function clearStateFromLocalStorage(){ localStorage.removeItem(STORAGE_KEY); }
+
+
+   // 🔧 Disattiva animazioni della label
+   const USE_LABEL_ANIMATION = false;
+
+
+   // Dati app
+   window.appData = { fasi: [] };
+
+
+   // Mappa icone (PNG)
+   const iconMap = {
+     'TAGLIO':       'https://i.ibb.co/3mLNtzmH/httpswww-noticons-comicond-Aq-EF7-CB4-DFFFEFE00-svg-3.png',
+     'LAVORAZIONE':  'https://i.ibb.co/wFJvTY3x/gear.png',
+     'ASSEMBLAGGIO': 'https://i.ibb.co/yBBPffpJ/puzzle.png',
+     'INCHIODATURA': 'https://i.ibb.co/wFN9QMmP/hammer.png',
+     'PULIZIA':      'https://i.ibb.co/LXnJPx69/sponge2.png',
+     'IMBALLAGGIO':  'https://i.ibb.co/rRNW8pm7/box.png'
+   };
+
+
+   document.addEventListener('DOMContentLoaded', function () {
+     const loader           = document.getElementById('loader');
+     const titleCard        = document.getElementById('title-card-container');
+     const selectionCard    = document.getElementById('selection-card');
+     const faseCard         = document.getElementById('fase-card');
+     const operatoriSelect  = document.getElementById('operatori-select');
+     const commesseSelect   = document.getElementById('commesse-select');
+     const faseSlider       = document.getElementById('fase-slider');
+     const faseText         = document.getElementById('fase-text');
+     const avvioBtn         = document.getElementById('avvio-btn');
+     const stopBtn          = document.getElementById('stop-btn');
+
+
+     // Cross-fade: due layer <img> persistenti dentro il thumb
+     const sliderThumbEmoji = document.getElementById('slider-thumb-emoji');
+     const thumbImgA = document.createElement('img');
+     const thumbImgB = document.createElement('img');
+     thumbImgA.className = 'visible';
+     thumbImgB.className = 'hidden';
+     sliderThumbEmoji.appendChild(thumbImgA);
+     sliderThumbEmoji.appendChild(thumbImgB);
+     let currentThumb = thumbImgA;
+     let nextThumb    = thumbImgB;
+
+
+     let previousSliderIndex = 0;
+     let debounceTimer;
+
+
+     // Precarica icone
+     const preloader = document.getElementById('icon-preloader');
+     Object.values(iconMap).forEach(url => { const img = new Image(); img.src = url; preloader.appendChild(img); });
+     const labelIcon = new Image(); labelIcon.src = 'https://www.noticons.com/icon/42pE/F7CB4D/FFFEFE00.svg'; preloader.appendChild(labelIcon);
+
+
+     const savedState = loadStateFromLocalStorage();
+
+
+     // Carica dati da server
+     google.script.run
+       .withSuccessHandler(data => {
+         populateOperatori(data.operatori);
+         populateCommesse(data.commesse);
+         populateFasi(data.fasi);
+
+
+         if (savedState) {
+           restoreUiFromState(savedState);
+           showToast('Attività in corso rilevata.', 'success');
+         } else {
+           previousSliderIndex = 0;
+           setTimeout(() => {
+             moveThumbToIndex(0);
+             crossfadeThumbIcon(window.appData.fasi[0] || '');
+             updateFaseLabel(0, 'up');
+           }, 50);
+         }
+
+
+         loader.style.display = 'none';
+         titleCard.style.display = 'flex';
+         selectionCard.style.display = 'flex';
+         faseCard.style.display = 'flex';
+       })
+       .withFailureHandler(error => {
+         console.error('Error fetching data:', error);
+         showToast('Errore nel caricamento dei dati.', 'error');
+       })
+       .getInitialData();
+
+
+     function populateOperatori(operatori){
+       operatoriSelect.innerHTML = '<option value="" disabled selected>Seleziona Operatore</option>';
+       (operatori||[]).forEach(op=>{
+         const option=document.createElement('option'); option.value=op; option.textContent=op;
+         operatoriSelect.appendChild(option);
+       });
+     }
+
+
+     function populateCommesse(commesse){
+       commesseSelect.innerHTML = '<option value="" disabled selected>Seleziona Commessa</option>';
+       (commesse||[]).forEach(comm=>{
+         const option=document.createElement('option');
+         option.value=comm.value; option.textContent=comm.text;
+         commesseSelect.appendChild(option);
+       });
+     }
+
+
+     function populateFasi(fasi){
+       if(!fasi || !fasi.length){ faseText.textContent='Nessuna fase'; return; }
+       window.appData.fasi = fasi;
+       faseSlider.min = 0;
+       faseSlider.max = fasi.length - 1;
+       faseSlider.value = 0;
+       faseSlider.addEventListener('input', handleSliderInput);
+     }
+
+
+     // === Slider ===
+     function handleSliderInput(){
+       const newIndex = parseInt(faseSlider.value, 10);
+
+
+       // Muovi subito il thumb (zero cambio immagine durante il drag)
+       moveThumbToIndex(newIndex);
+
+
+       // Debounce: quando ti fermi, aggiorna label + icona
+       clearTimeout(debounceTimer);
+       debounceTimer = setTimeout(()=>{
+         if(newIndex !== previousSliderIndex){
+           const direction = newIndex > previousSliderIndex ? 'up' : 'down';
+
+
+           // ✅ label senza animazioni
+           updateFaseLabel(newIndex, direction);
+
+
+           // ✅ cross-fade icona thumb
+           crossfadeThumbIcon(window.appData.fasi[newIndex]);
+
+
+           previousSliderIndex = newIndex;
+         }
+       }, 50);
+     }
+
+
+     function moveThumbToIndex(index){
+       const slider = faseSlider;
+       const min = parseInt(slider.min, 10);
+       const max = parseInt(slider.max, 10);
+       if (max <= min) { sliderThumbEmoji.style.left = '50%'; return; }
+       const percent = (index - min) / (max - min);
+       const thumbWidth = 48;
+       const trackWidth = slider.parentElement.offsetWidth;
+       const newLeft = percent * (trackWidth - thumbWidth) + (thumbWidth / 2);
+       sliderThumbEmoji.style.left = `${newLeft}px`;
+     }
+
+
+     function crossfadeThumbIcon(faseName){
+       const iconUrl = iconMap[faseName];
+       if(!iconUrl) return;
+
+
+       // Prepara layer nascosto
+       nextThumb.src = iconUrl;
+       void nextThumb.offsetWidth; // reflow per transizione affidabile
+
+
+       // Cross-fade
+       nextThumb.classList.remove('hidden'); nextThumb.classList.add('visible');
+       currentThumb.classList.remove('visible'); currentThumb.classList.add('hidden');
+
+
+       // Swap riferimenti
+       [currentThumb, nextThumb] = [nextThumb, currentThumb];
+     }
+
+
+     function restoreUiFromState(state){
+       const faseIndex = window.appData.fasi.indexOf(state.fase);
+       if(faseIndex !== -1){
+         operatoriSelect.value = state.operatore;
+         commesseSelect.value  = state.commessa;
+         faseSlider.value      = faseIndex;
+
+
+         previousSliderIndex   = faseIndex;
+
+
+         setTimeout(()=>{
+           moveThumbToIndex(faseIndex);
+           crossfadeThumbIcon(state.fase);
+           updateFaseLabel(faseIndex, 'up');
+         }, 50);
+
+
+         setFormEnabled(false);
+         avvioBtn.classList.remove('expanded'); avvioBtn.classList.add('collapsed');
+         stopBtn.classList.remove('collapsed');  stopBtn.classList.add('expanded');
+       } else {
+         clearStateFromLocalStorage();
+       }
+     }
+
+
+     // === Label senza animazioni (toggle) ===
+     function updateFaseLabel(index, direction){
+       if (!USE_LABEL_ANIMATION) {
+         faseText.className = '';
+         faseText.textContent = window.appData.fasi[index] || '';
+         return;
+       }
+       // (Se mai volessi riattivarle, puoi ripristinare qui le classi animate)
+       const animationOutClass = direction === 'up' ? 'animating-out-up' : 'animating-out-down';
+       const animationInClass  = direction === 'up' ? 'animating-in-up' : 'animating-in-down';
+       faseText.className = animationOutClass;
+       faseText.addEventListener('animationend', function handler1(){
+         faseText.textContent = window.appData.fasi[index] || '';
+         faseText.className   = animationInClass;
+         faseText.addEventListener('animationend', function handler2(){
+           faseText.className = '';
+         }, { once:true });
+       }, { once:true });
+     }
+
+
+     window.addEventListener('resize', ()=>{
+       if(window.appData.fasi.length > 0){
+         moveThumbToIndex(parseInt(faseSlider.value,10));
+       }
+     });
+
+
+     // === Avvio / Stop ===
+     function handleAvvio(){
+       const operatore    = operatoriSelect.value;
+       const commessa     = commesseSelect.value;
+       const selectedFase = window.appData.fasi[faseSlider.value];
+       if(!operatore || !commessa || !selectedFase){
+         showToast('Compila tutti i campi prima di iniziare.', 'error'); return;
+       }
+
+
+       setButtonsState(true);
+       saveStateToLocalStorage({ operatore, commessa, fase: selectedFase });
+       setFormEnabled(false);
+
+
+       google.script.run
+         .withSuccessHandler(response=>{
+           showToast(response, 'success');
+           avvioBtn.classList.remove('expanded'); avvioBtn.classList.add('collapsed');
+           stopBtn .classList.remove('collapsed'); stopBtn .classList.add('expanded');
+           setButtonsState(false);
+         })
+         .withFailureHandler(error=>{
+           showToast(error.message, 'error');
+           setButtonsState(false);
+           clearStateFromLocalStorage();
+           setFormEnabled(true);
+         })
+         .startWork(commessa, selectedFase, operatore);
+     }
+
+
+     function handleStop(){
+       const currentState = loadStateFromLocalStorage();
+       if(!currentState){ showToast('Nessuna attività da terminare.', 'error'); return; }
+       const { operatore, commessa, fase } = currentState;
+
+
+       setButtonsState(true);
+       google.script.run
+         .withSuccessHandler(response=>{
+           showToast(response, 'success');
+           clearStateFromLocalStorage();
+           setFormEnabled(true);
+           stopBtn .classList.remove('expanded'); stopBtn .classList.add('collapsed');
+           avvioBtn.classList.remove('collapsed'); avvioBtn.classList.add('expanded');
+           setButtonsState(false);
+         })
+         .withFailureHandler(error=>{
+           showToast(error.message, 'error');
+           setButtonsState(false);
+         })
+         .endWork(commessa, fase, operatore);
+     }
+
+
+     function setButtonsState(isWorking){
+       avvioBtn.disabled = isWorking;
+       stopBtn.disabled  = isWorking;
+     }
+
+
+     function setFormEnabled(enabled){
+       operatoriSelect.disabled = !enabled;
+       commesseSelect .disabled = !enabled;
+       faseSlider     .disabled = !enabled;
+     }
+
+
+     avvioBtn.addEventListener('click', handleAvvio);
+     stopBtn .addEventListener('click', handleStop);
+   });
+
+
+   function showToast(message, type='success'){
+     const toast = document.getElementById('toast');
+     toast.textContent = message;
+     toast.className   = 'show ' + type;
+     setTimeout(()=>{ toast.className = toast.className.replace('show',''); }, 3000);
+   }
+ </script>
+</body>
 </html>
-
