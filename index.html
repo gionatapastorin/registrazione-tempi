@@ -106,30 +106,30 @@ const GS_URL = 'https://script.google.com/macros/s/AKfycbymao6cbAL62dVZRJHiM0HFQ
 const API_TOKEN = 'Lavori2025-OK'; // deve essere lo stesso delle Script Properties
 
 // helper per inviare richieste al tuo Apps Script
+const GS_URL    = 'https://script.google.com/macros/s/AKfycbymao6cbAL62dVZRJHiM0HFQpeU7wE8YpheLqmdwQX0OlYHFHlggyOwHNVwIPBfcAj5/exec';
+const API_TOKEN = '<<lo stesso in Script Properties: API_TOKEN>>';
+
 async function gsCall(method, args = []) {
-  // se non è getInitialData, aggiungi il token
-  const params = new URLSearchParams();
-  params.set('method', method);
-  params.set('args', JSON.stringify(args));
-  if (method !== 'getInitialData') params.set('token', API_TOKEN);
+  const body = new URLSearchParams();
+  body.set('method', method);
+  body.set('args', JSON.stringify(args));
+  if (method !== 'getInitialData') body.set('token', API_TOKEN);
 
-  try {
-    const res = await fetch(GS_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body: params
-    });
-
-    const data = await res.json();
-    if (!data.ok) throw new Error(data.error);
-    return data.result;
-  } catch (err) {
-    console.error('Errore chiamata GAS:', err);
-    throw err;
-  }
+  const res = await fetch(GS_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body
+  });
+  const data = await res.json();
+  if (!data.ok) throw new Error(data.error);
+  return data.result;
 }
+
+// esempi
+// const init = await gsCall('getInitialData');
+// await gsCall('startWork', ['C-123','TAGLIO','Mario']);
+// await gsCall('endWork',   ['C-123','TAGLIO','Mario']);
+
 
 // esempio: carica dati iniziali
 async function loadInitialData() {
