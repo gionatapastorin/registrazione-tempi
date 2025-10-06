@@ -9,10 +9,14 @@
 
 
 *{ box-sizing:border-box; margin:0; padding:0; }
-html,body{
- height:100%; font-family:'Open Sans',sans-serif;
- background:var(--page-bg-color); color:var(--secondary-text-color);
- font-size:18px; padding:16px;
+html, body {
+  height: 100%;
+  font-family: 'Open Sans', sans-serif;
+  background: var(--page-bg-color);
+  color: var(--secondary-text-color);
+  font-size: 18px;
+  padding: 16px;
+  overflow-x: hidden; /* <-- Aggiungi questa riga */
 }
 
 
@@ -172,9 +176,11 @@ main{ display:flex; flex-direction:column; gap:16px; }
 @keyframes fadeout{ from{bottom:30px; opacity:1;} to{bottom:0; opacity:0;} }
 
 .slider:disabled::-webkit-slider-thumb {
-  opacity: 1;
+  opacity: 1 !important;
+  background: var(--secondary-color) !important; /* Forza anche il colore di sfondo */
 }
 
 .slider:disabled::-moz-range-thumb {
-  opacity: 1;
+  opacity: 1 !important;
+  background: var(--secondary-color) !important; /* Forza anche il colore di sfondo */
 }
