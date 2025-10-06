@@ -105,34 +105,53 @@
  <div id="toast"></div>
 
 <script>
-  // ============ CONFIG =============
+  // ============ CONFIG ============
   const GS_URL    = 'https://script.google.com/macros/s/AKfycbzHoYBeJatZYiHcDdMA7X1RlaYqPGtM81zRVIImihrMLpZiSurk7nxXLFVrxIms8upo/exec';
-  const API_TOKEN = 'Lavori2025-OK'; // deve coincidere con Script Properties: API_TOKEN
+  const API_TOKEN = 'Lavori2025-OK'; // stesso valore in Script Properties: API_TOKEN
 
-  // ============ HELPER GAS (POST x-www-form-urlencoded → niente preflight) =============
-  async function gsCall(method, args = []) {
-    const body = new URLSearchParams();
-    body.set('method', method);
-    body.set('args', JSON.stringify(args));
-    if (method !== 'getInitialData') body.set('token', API_TOKEN);
+  // ============ JSONP CLIENT ============
+  const gs = {
+    call(method, args = [], { token, timeout = 15000 } = {}, cb) {
+      const cbName = '__gs_cb_' + Date.now() + '_' + Math.floor(Math.random()*1e6);
+      const params = new URLSearchParams({
+        method,
+        args: JSON.stringify(args),
+        callback: cbName
+      });
+      if (method !== 'getInitialData') params.set('token', token || API_TOKEN);
 
-    const res = await fetch(GS_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body
-    });
-    const data = await res.json();
-    if (!data.ok) throw new Error(data.error);
-    return data.result;
-  }
+      const s = document.createElement('script');
+      s.src = `${GS_URL}?${params.toString()}`;
 
-  // (facoltative) wrappers semanticamente comodi
-  const api = {
-    getInitialData: () => gsCall('getInitialData'),
-    startWork: (codiceCommessa, fase, operatore) => gsCall('startWork', [codiceCommessa, fase, operatore]),
-    endWork:   (codiceCommessa, fase, operatore) => gsCall('endWork',   [codiceCommessa, fase, operatore]),
+      let done = false;
+      const cleanup = () => {
+        if (done) return;
+        done = true;
+        s.remove();
+        try { delete window[cbName]; } catch(e){ window[cbName] = undefined; }
+      };
+
+      const t = setTimeout(() => {
+        cleanup();
+        cb && cb({ ok:false, error:'Timeout JSONP' });
+      }, timeout);
+
+      window[cbName] = (resp) => { clearTimeout(t); cleanup(); cb && cb(resp); };
+      s.onerror = () => { clearTimeout(t); cleanup(); cb && cb({ ok:false, error:'Errore rete JSONP' }); };
+
+      document.head.appendChild(s);
+    },
+
+    getInitialData(cb){ this.call('getInitialData', [], {}, cb); },
+    startWork(codiceCommessa, fase, operatore, cb){
+      this.call('startWork', [codiceCommessa, fase, operatore], { token: API_TOKEN }, cb);
+    },
+    endWork(codiceCommessa, fase, operatore, cb){
+      this.call('endWork', [codiceCommessa, fase, operatore], { token: API_TOKEN }, cb);
+    }
   };
 </script>
+
 
 
  
@@ -200,35 +219,36 @@
 
      const savedState = loadStateFromLocalStorage();
 
+     // Carica dati da server (JSONP)
+     gs.getInitialData(resp => {
+       if (!resp || !resp.ok) {
+         console.error('Error fetching data:', resp && resp.error);
+         showToast('Errore nel caricamento dei dati.', 'error');
+         return;
+       }
+       const data = resp.result;
+       populateOperatori(data.operatori);
+       populateCommesse(data.commesse);
+       populateFasi(data.fasi);
 
-          // Carica dati da server (via fetch → doPost)
-     api.getInitialData()
-       .then(data => {
-         populateOperatori(data.operatori);
-         populateCommesse(data.commesse);
-         populateFasi(data.fasi);
+       if (savedState) {
+         restoreUiFromState(savedState);
+         showToast('Attività in corso rilevata.', 'success');
+       } else {
+         previousSliderIndex = 0;
+         setTimeout(() => {
+           moveThumbToIndex(0);
+           crossfadeThumbIcon(window.appData.fasi[0] || '');
+           updateFaseLabel(0, 'up');
+         }, 50);
+       }
 
-         if (savedState) {
-           restoreUiFromState(savedState);
-           showToast('Attività in corso rilevata.', 'success');
-         } else {
-           previousSliderIndex = 0;
-           setTimeout(() => {
-             moveThumbToIndex(0);
-             crossfadeThumbIcon(window.appData.fasi[0] || '');
-             updateFaseLabel(0, 'up');
-           }, 50);
-         }
+       loader.style.display = 'none';
+       titleCard.style.display = 'flex';
+       selectionCard.style.display = 'flex';
+       faseCard.style.display = 'flex';
+     });
 
-         loader.style.display = 'none';
-         titleCard.style.display = 'flex';
-         selectionCard.style.display = 'flex';
-         faseCard.style.display = 'flex';
-       })
-       .catch(error => {
-         console.error('Error fetching data:', error);
-         showToast('Errore nel caricamento dei dati: ' + (error.message || error), 'error');
-       });
 
 
 
@@ -380,7 +400,7 @@
 
 
      // === Avvio / Stop ===
-          function handleAvvio(){
+           function handleAvvio(){
        const operatore    = operatoriSelect.value;
        const commessa     = commesseSelect.value;
        const selectedFase = window.appData.fasi[faseSlider.value];
@@ -392,43 +412,45 @@
        saveStateToLocalStorage({ operatore, commessa, fase: selectedFase });
        setFormEnabled(false);
 
-       api.startWork(commessa, selectedFase, operatore)
-         .then(response => {
-           showToast(response, 'success');
-           avvioBtn.classList.remove('expanded'); avvioBtn.classList.add('collapsed');
-           stopBtn .classList.remove('collapsed'); stopBtn .classList.add('expanded');
-           setButtonsState(false);
-         })
-         .catch(error => {
-           showToast(error.message || String(error), 'error');
+       gs.startWork(commessa, selectedFase, operatore, resp => {
+         if (!resp || !resp.ok) {
+           showToast(resp && resp.error ? resp.error : 'Errore avvio', 'error');
            setButtonsState(false);
            clearStateFromLocalStorage();
            setFormEnabled(true);
-         });
+           return;
+         }
+         showToast(resp.result, 'success');
+         avvioBtn.classList.remove('expanded'); avvioBtn.classList.add('collapsed');
+         stopBtn .classList.remove('collapsed'); stopBtn .classList.add('expanded');
+         setButtonsState(false);
+       });
      }
 
 
 
-          function handleStop(){
+
+              function handleStop(){
        const currentState = loadStateFromLocalStorage();
        if(!currentState){ showToast('Nessuna attività da terminare.', 'error'); return; }
        const { operatore, commessa, fase } = currentState;
 
        setButtonsState(true);
-       api.endWork(commessa, fase, operatore)
-         .then(response => {
-           showToast(response, 'success');
-           clearStateFromLocalStorage();
-           setFormEnabled(true);
-           stopBtn .classList.remove('expanded'); stopBtn .classList.add('collapsed');
-           avvioBtn.classList.remove('collapsed'); avvioBtn.classList.add('expanded');
+       gs.endWork(commessa, fase, operatore, resp => {
+         if (!resp || !resp.ok) {
+           showToast(resp && resp.error ? resp.error : 'Errore stop', 'error');
            setButtonsState(false);
-         })
-         .catch(error => {
-           showToast(error.message || String(error), 'error');
-           setButtonsState(false);
-         });
+           return;
+         }
+         showToast(resp.result, 'success');
+         clearStateFromLocalStorage();
+         setFormEnabled(true);
+         stopBtn .classList.remove('expanded'); stopBtn .classList.add('collapsed');
+         avvioBtn.classList.remove('collapsed'); avvioBtn.classList.add('expanded');
+         setButtonsState(false);
+       });
      }
+
 
 
 
