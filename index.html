@@ -104,53 +104,36 @@
 
  <div id="toast"></div>
 
- <script>
-const GS_URL = 'https://script.google.com/macros/s/AKfycbymao6cbAL62dVZRJHiM0HFQpeU7wE8YpheLqmdwQX0OlYHFHlggyOwHNVwIPBfcAj5/exec';
-const API_TOKEN = 'Lavori2025-OK'; // deve essere lo stesso delle Script Properties
+<script>
+  // ============ CONFIG =============
+  const GS_URL    = 'https://script.google.com/macros/s/AKfycbymao6cbAL62dVZRJHiM0HFQpeU7wE8YpheLqmdwQX0OlYHFHlggyOwHNVwIPBfcAj5/exec';
+  const API_TOKEN = 'Lavori2025-OK'; // deve coincidere con Script Properties: API_TOKEN
 
-// helper per inviare richieste al tuo Apps Script
-const GS_URL    = 'https://script.google.com/macros/s/AKfycbymao6cbAL62dVZRJHiM0HFQpeU7wE8YpheLqmdwQX0OlYHFHlggyOwHNVwIPBfcAj5/exec';
-const API_TOKEN = '<<lo stesso in Script Properties: API_TOKEN>>';
+  // ============ HELPER GAS (POST x-www-form-urlencoded → niente preflight) =============
+  async function gsCall(method, args = []) {
+    const body = new URLSearchParams();
+    body.set('method', method);
+    body.set('args', JSON.stringify(args));
+    if (method !== 'getInitialData') body.set('token', API_TOKEN);
 
-async function gsCall(method, args = []) {
-  const body = new URLSearchParams();
-  body.set('method', method);
-  body.set('args', JSON.stringify(args));
-  if (method !== 'getInitialData') body.set('token', API_TOKEN);
+    const res = await fetch(GS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error);
+    return data.result;
+  }
 
-  const res = await fetch(GS_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body
-  });
-  const data = await res.json();
-  if (!data.ok) throw new Error(data.error);
-  return data.result;
-}
-
-// esempi
-// const init = await gsCall('getInitialData');
-// await gsCall('startWork', ['C-123','TAGLIO','Mario']);
-// await gsCall('endWork',   ['C-123','TAGLIO','Mario']);
-
-
-// esempio: carica dati iniziali
-async function loadInitialData() {
-  const result = await gsCall('getInitialData');
-  console.log('Dati iniziali:', result);
-}
-
-// esempio: startWork / endWork
-async function startWork(codiceCommessa, fase, operatore) {
-  const msg = await gsCall('startWork', [codiceCommessa, fase, operatore]);
-  alert(msg);
-}
-
-async function endWork(codiceCommessa, fase, operatore) {
-  const msg = await gsCall('endWork', [codiceCommessa, fase, operatore]);
-  alert(msg);
-}
+  // (facoltative) wrappers semanticamente comodi
+  const api = {
+    getInitialData: () => gsCall('getInitialData'),
+    startWork: (codiceCommessa, fase, operatore) => gsCall('startWork', [codiceCommessa, fase, operatore]),
+    endWork:   (codiceCommessa, fase, operatore) => gsCall('endWork',   [codiceCommessa, fase, operatore]),
+  };
 </script>
+
 
  
 <script>
@@ -218,13 +201,12 @@ async function endWork(codiceCommessa, fase, operatore) {
      const savedState = loadStateFromLocalStorage();
 
 
-     // Carica dati da server
-     google.script.run
-       .withSuccessHandler(data => {
+          // Carica dati da server (via fetch → doPost)
+     api.getInitialData()
+       .then(data => {
          populateOperatori(data.operatori);
          populateCommesse(data.commesse);
          populateFasi(data.fasi);
-
 
          if (savedState) {
            restoreUiFromState(savedState);
@@ -238,17 +220,16 @@ async function endWork(codiceCommessa, fase, operatore) {
            }, 50);
          }
 
-
          loader.style.display = 'none';
          titleCard.style.display = 'flex';
          selectionCard.style.display = 'flex';
          faseCard.style.display = 'flex';
        })
-       .withFailureHandler(error => {
+       .catch(error => {
          console.error('Error fetching data:', error);
-         showToast('Errore nel caricamento dei dati.', 'error');
-       })
-       .getInitialData();
+         showToast('Errore nel caricamento dei dati: ' + (error.message || error), 'error');
+       });
+
 
 
      function populateOperatori(operatori){
@@ -399,7 +380,7 @@ async function endWork(codiceCommessa, fase, operatore) {
 
 
      // === Avvio / Stop ===
-     function handleAvvio(){
+          function handleAvvio(){
        const operatore    = operatoriSelect.value;
        const commessa     = commesseSelect.value;
        const selectedFase = window.appData.fasi[faseSlider.value];
@@ -407,38 +388,35 @@ async function endWork(codiceCommessa, fase, operatore) {
          showToast('Compila tutti i campi prima di iniziare.', 'error'); return;
        }
 
-
        setButtonsState(true);
        saveStateToLocalStorage({ operatore, commessa, fase: selectedFase });
        setFormEnabled(false);
 
-
-       google.script.run
-         .withSuccessHandler(response=>{
+       api.startWork(commessa, selectedFase, operatore)
+         .then(response => {
            showToast(response, 'success');
            avvioBtn.classList.remove('expanded'); avvioBtn.classList.add('collapsed');
            stopBtn .classList.remove('collapsed'); stopBtn .classList.add('expanded');
            setButtonsState(false);
          })
-         .withFailureHandler(error=>{
-           showToast(error.message, 'error');
+         .catch(error => {
+           showToast(error.message || String(error), 'error');
            setButtonsState(false);
            clearStateFromLocalStorage();
            setFormEnabled(true);
-         })
-         .startWork(commessa, selectedFase, operatore);
+         });
      }
 
 
-     function handleStop(){
+
+          function handleStop(){
        const currentState = loadStateFromLocalStorage();
        if(!currentState){ showToast('Nessuna attività da terminare.', 'error'); return; }
        const { operatore, commessa, fase } = currentState;
 
-
        setButtonsState(true);
-       google.script.run
-         .withSuccessHandler(response=>{
+       api.endWork(commessa, fase, operatore)
+         .then(response => {
            showToast(response, 'success');
            clearStateFromLocalStorage();
            setFormEnabled(true);
@@ -446,12 +424,12 @@ async function endWork(codiceCommessa, fase, operatore) {
            avvioBtn.classList.remove('collapsed'); avvioBtn.classList.add('expanded');
            setButtonsState(false);
          })
-         .withFailureHandler(error=>{
-           showToast(error.message, 'error');
+         .catch(error => {
+           showToast(error.message || String(error), 'error');
            setButtonsState(false);
-         })
-         .endWork(commessa, fase, operatore);
+         });
      }
+
 
 
      function setButtonsState(isWorking){
