@@ -110,7 +110,7 @@
  <div id="toast"></div>
 
  <script>
-const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbznZU362y2bQBTjEggNPjsKg8Lvy1tTIfgmvr3LTraeo6-a7jvCBkglWnCsxfThj-vq/exec"; // Il tuo URL di Apps Script
+const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbznZU362y2bQBTjEggNPjsKg8Lvy1tTIfgmvr3LTraeo6-a7jvCBkglWnCsxfThj-vq/exec";
 const API_TOKEN  = "7gH2-Lavori2025-OK";
 
 // Nuovo gestore delle chiamate API basato su fetch
@@ -128,7 +128,7 @@ const server = {
       method: 'POST',
       redirect: 'follow',
       headers: {
-        'Content-Type': 'text/plain;charset=utf-t', // Necessario per Apps Script
+        'Content-Type': 'text/plain;charset=utf-8', // Corretto per Apps Script
       },
       body: JSON.stringify(payload)
     })
@@ -140,7 +140,7 @@ const server = {
     })
     .then(data => {
       if (data.ok) {
-        return data.result; // Restituisce direttamente il risultato in caso di successo
+        return data.result;
       } else {
         throw new Error(data.error || 'Errore sconosciuto dal server.');
       }
@@ -148,7 +148,7 @@ const server = {
   }
 };
 
-// "Simuliamo" la vecchia sintassi di google.script.run per ridurre le modifiche al resto del codice
+// Simuliamo la vecchia sintassi di google.script.run
 const google = {
   script: {
     run: {
@@ -163,7 +163,6 @@ const google = {
   }
 };
 </script>
-
 <script>
    // === Stato locale ===
    const STORAGE_KEY = 'workState';
