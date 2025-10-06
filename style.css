@@ -228,3 +228,12 @@ fieldset[disabled] input[type="range"]::-moz-range-thumb {
 
 /* Blocca l'interazione ma non la resa visiva (se usi una classe “is-disabled” sul form) */
 .is-disabled input[type="range"] { pointer-events: none; }
+/* Coerenza visiva del track anche quando NON è disabilitato */
+.slider {
+  background: var(--primary-text-color);
+}
+/* Il pallino resta “solido” su iOS durante transizioni di stato */
+.slider::-webkit-slider-thumb {
+  will-change: transform;
+}
+
