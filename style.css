@@ -87,9 +87,10 @@ main{ display:flex; flex-direction:column; gap:16px; }
 
 /* Thumb container */
 #slider-thumb-emoji{
- position:absolute; top:50%; left:0; transform:translate(-50%,-50%);
- width:48px; height:48px; display:grid; justify-content:center; place-items:center;
- pointer-events:none; z-index:3; place
+  position:absolute; top:50%; left:0; transform:translate(-50%,-50%);
+  width:48px; height:48px; display:grid; justify-content:center; place-items:center;
+  pointer-events:none; z-index:3; 
+- place
 }
 
 
@@ -184,3 +185,46 @@ main{ display:flex; flex-direction:column; gap:16px; }
   opacity: 1 !important;
   background: var(--secondary-color) !important; /* Forza anche il colore di sfondo */
 }
+/* ===== Evita lo sbiadimento degli slider disabilitati (Safari/iOS) ===== */
+input[type="range"][disabled],
+.slider:disabled {
+  opacity: 1 !important;                      /* niente “trasparente” */
+  background: var(--primary-text-color) !important; /* track pieno */
+}
+
+/* Track/pallino WebKit (Safari/Chrome mobile) */
+input[type="range"][disabled]::-webkit-slider-runnable-track,
+.slider:disabled::-webkit-slider-runnable-track {
+  opacity: 1 !important;
+  background: var(--primary-text-color) !important;
+}
+
+input[type="range"][disabled]::-webkit-slider-thumb,
+.slider:disabled::-webkit-slider-thumb {
+  opacity: 1 !important;
+  background: var(--secondary-color) !important;
+  border-color: var(--primary-color) !important;
+}
+
+/* Track/pallino Firefox */
+input[type="range"][disabled]::-moz-range-track {
+  opacity: 1 !important;
+  background: var(--primary-text-color) !important;
+}
+input[type="range"][disabled]::-moz-range-thumb {
+  opacity: 1 !important;
+  background: var(--secondary-color) !important;
+  border-color: var(--primary-color) !important;
+}
+
+/* Se il form viene disabilitato via <fieldset disabled>, forziamo comunque visibile lo slider */
+fieldset[disabled] input[type="range"],
+fieldset[disabled] input[type="range"]::-webkit-slider-runnable-track,
+fieldset[disabled] input[type="range"]::-webkit-slider-thumb,
+fieldset[disabled] input[type="range"]::-moz-range-track,
+fieldset[disabled] input[type="range"]::-moz-range-thumb {
+  opacity: 1 !important;
+}
+
+/* Blocca l'interazione ma non la resa visiva (se usi una classe “is-disabled” sul form) */
+.is-disabled input[type="range"] { pointer-events: none; }
