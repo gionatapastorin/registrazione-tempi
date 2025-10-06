@@ -495,10 +495,24 @@ const API_TOKEN  = "7gH2-Lavori2025-OK";
 
 
      function setFormEnabled(enabled){
-       operatoriSelect.disabled = !enabled;
-       commesseSelect .disabled = !enabled;
-       faseSlider     .disabled = !enabled;
-     }
+      // disabilita solo select e input testo
+      operatoriSelect.disabled = !enabled;
+      commesseSelect.disabled  = !enabled;
+    
+      // NON disabilitare lo slider: bloccalo senza cambiarne la resa
+      const sliderWrap = document.querySelector('.slider-container') 
+                      || faseSlider.closest('.slider-container') 
+                      || faseSlider.parentElement;
+    
+      if(!enabled){
+        sliderWrap.classList.add('is-locked');
+        faseSlider.setAttribute('aria-disabled','true'); // solo per accessibilità
+      }else{
+        sliderWrap.classList.remove('is-locked');
+        faseSlider.removeAttribute('aria-disabled');
+      }
+    }
+
 
 
      avvioBtn.addEventListener('click', handleAvvio);
