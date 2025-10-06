@@ -236,4 +236,24 @@ fieldset[disabled] input[type="range"]::-moz-range-thumb {
 .slider::-webkit-slider-thumb {
   will-change: transform;
 }
+/* Blocca interazione slider senza sbiadire */
+.is-locked input[type="range"],
+.is-locked .slider { pointer-events: none; }
+
+.is-locked .slider,
+.is-locked input[type="range"],
+.is-locked .slider::-webkit-slider-runnable-track,
+.is-locked .slider::-webkit-slider-thumb,
+.is-locked input[type="range"]::-webkit-slider-runnable-track,
+.is-locked input[type="range"]::-webkit-slider-thumb {
+  opacity: 1 !important;
+  filter: none !important;
+}
+
+/* (opzionale) lieve overlay per stato bloccato */
+.slider-container.is-locked { position: relative; }
+.slider-container.is-locked::after{
+  content:""; position:absolute; inset:-6px; border-radius:12px;
+  background: rgba(17,115,93,.10); pointer-events:none;
+}
 
