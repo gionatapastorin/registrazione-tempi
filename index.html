@@ -2,24 +2,16 @@
 <html>
 <head>
  <base target="_top">
-<!-- <meta http-equiv="Content-Security-Policy"
+<meta http-equiv="Content-Security-Policy"
   content="
     default-src 'self';
-    script-src 'self' 'unsafe-inline' 'unsafe-eval'
-      https://script.google.com
-      https://script.googleusercontent.com
-      https://www.google.com
-      https://www.gstatic.com
-      https://ssl.gstatic.com;
     connect-src 'self' https://script.google.com https://script.googleusercontent.com;
+    script-src 'self' 'unsafe-inline' https://script.google.com https://script.googleusercontent.com;
+    style-src 'self' 'unsafe-inline';
     img-src 'self' data: https:;
-    style-src 'self' 'unsafe-inline' https:;
     font-src 'self' https:;
-    object-src 'none';
-    base-uri 'self';
-    frame-ancestors 'none';
   ">
--->
+
 
  <!-- Meta -->
  <meta name="theme-color" content="#11735d">
@@ -110,59 +102,54 @@
  <div id="toast"></div>
 
  <script>
-const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzFNKCE4w8Cele1F95a3_fcd0gft1vpihP2jMXLD4D0I91VthTnZCaQlMaoU676PvPI/exec";
-const API_TOKEN  = "7gH2-Lavori2025-OK";
+const GS_URL = 'https://script.google.com/macros/s/AKfycbymao6cbAL62dVZRJHiM0HFQpeU7wE8YpheLqmdwQX0OlYHFHlggyOwHNVwIPBfcAj5/exec';
+const API_TOKEN = 'Lavori2025-OK'; // deve essere lo stesso delle Script Properties
 
-// Nuovo gestore delle chiamate API basato su fetch
-const server = {
-  call: function(method, args = []) {
-    const payload = {
-      method: method,
-      args: args
-    };
-    if (method !== 'getInitialData') {
-      payload.token = API_TOKEN;
-    }
+// helper per inviare richieste al tuo Apps Script
+async function gsCall(method, args = []) {
+  // se non è getInitialData, aggiungi il token
+  const params = new URLSearchParams();
+  params.set('method', method);
+  params.set('args', JSON.stringify(args));
+  if (method !== 'getInitialData') params.set('token', API_TOKEN);
 
-    return fetch(WEBAPP_URL, {
+  try {
+    const res = await fetch(GS_URL, {
       method: 'POST',
-      redirect: 'follow',
       headers: {
-        'Content-Type': 'text/plain;charset=utf-8', // Corretto per Apps Script
+        'Content-Type': 'application/x-www-form-urlencoded'
       },
-      body: JSON.stringify(payload)
-    })
-    .then(response => {
-      if (!response.ok) {
-        throw new Error('Errore di rete o server.');
-      }
-      return response.json();
-    })
-    .then(data => {
-      if (data.ok) {
-        return data.result;
-      } else {
-        throw new Error(data.error || 'Errore sconosciuto dal server.');
-      }
+      body: params
     });
-  }
-};
 
-// Simuliamo la vecchia sintassi di google.script.run
-const google = {
-  script: {
-    run: {
-      withSuccessHandler: (successCb) => ({
-        withFailureHandler: (failureCb) => ({
-          getInitialData: (...args) => server.call('getInitialData', args).then(successCb).catch(failureCb),
-          startWork: (...args) => server.call('startWork', args).then(successCb).catch(failureCb),
-          endWork: (...args) => server.call('endWork', args).then(successCb).catch(failureCb)
-        })
-      })
-    }
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error);
+    return data.result;
+  } catch (err) {
+    console.error('Errore chiamata GAS:', err);
+    throw err;
   }
-};
+}
+
+// esempio: carica dati iniziali
+async function loadInitialData() {
+  const result = await gsCall('getInitialData');
+  console.log('Dati iniziali:', result);
+}
+
+// esempio: startWork / endWork
+async function startWork(codiceCommessa, fase, operatore) {
+  const msg = await gsCall('startWork', [codiceCommessa, fase, operatore]);
+  alert(msg);
+}
+
+async function endWork(codiceCommessa, fase, operatore) {
+  const msg = await gsCall('endWork', [codiceCommessa, fase, operatore]);
+  alert(msg);
+}
 </script>
+
+ 
 <script>
    // === Stato locale ===
    const STORAGE_KEY = 'workState';
